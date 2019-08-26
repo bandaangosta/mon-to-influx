@@ -147,8 +147,8 @@ class RetrieveData:
         try:
             # Read remote CSV file directly to a Pandas DataFrame structure
             raw = pd.read_csv(url, sep=' ', header=None, engine='c', prefix='col')
-        except pd.cparser.CParserError as ex:
-            print('Skipping malformed file %s...' % url)
+        #except pd.cparser.CParserError as ex:
+        #    print('Skipping malformed file %s...' % url)
         except (ValueError, pd.io.common.EmptyDataError) as ex:
             print('Skipping empty file %s...' % url)
         except urllib2.URLError as ex:
@@ -156,8 +156,8 @@ class RetrieveData:
             sleep(1)
             try:
                 raw = pd.read_csv(url, sep=' ', header=None, engine='c', prefix='col')
-            except pd.parser.CParserError as ex:
-                print('Skipping malformed file %s...' % url)
+            #except pd.parser.CParserError as ex:
+            #    print('Skipping malformed file %s...' % url)
             except ValueError as ex:
                 print('Skipping empty file %s...' % url)
             except urllib2.URLError as ex:

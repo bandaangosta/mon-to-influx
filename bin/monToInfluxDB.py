@@ -95,7 +95,7 @@ monitorPoints = [
 
 for measurement in monitorPoints:
     plotData = {'abm': measurement['abm'], 'lru': measurement['lru'], 'monitor': measurement['mon']}
-    data = fetcher.getData(plotData, daysBack=0)
+    data = fetcher.getData(plotData, daysBack=7) #, strDateEnd='2019-08-01 00:00:00')
 
     # Remove microseconds part of timestamp to reduce storage
     # Alternatively use: lambda t: t.strftime('%Y-%m-%d %H:%M:%S')
