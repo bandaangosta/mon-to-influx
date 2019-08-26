@@ -1,6 +1,22 @@
 # TODO: add docstring
 # TODO: add logging
 
+import os
+import sys
+
+# Adds application root to path
+PATH_ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
+if not PATH_ROOT in sys.path:
+    sys.path.insert(1, PATH_ROOT)
+
+# Activate Python virtual environment containing all needed libraries and dependencies
+if os.path.exists(os.path.join(PATH_ROOT, 'venv/bin/activate_this.py')):
+    activate_this = os.path.join(PATH_ROOT, 'venv', 'bin', 'activate_this.py')
+else:
+    print('Virtual environment not found')
+    raise SystemExit
+exec(open(activate_this).read(), {'__file__': activate_this})
+
 from datetime import datetime
 import requests
 import traceback
