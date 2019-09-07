@@ -1,28 +1,11 @@
 import glob, re, os
-# import dataiku
 from datetime import datetime
-# import matplotlib
-# matplotlib.use('Agg')
-
-# import HwMonitoring.PlotMonitor as PlotMonitor
-# import HwMonitoring.DateTools as DateTools
 import lib.PlotMonitor as PlotMonitor
 import lib.DateTools as DateTools
 
 class DataFetch():
     def __init__(self):
         pass
-        # # Get current project cache folder data
-        # projectConfig = dataiku.get_custom_variables()
-        # cacheFolder = dataiku.Folder(projectConfig["CACHE_FOLDER_ID"])
-        # cacheFolderInfo = cacheFolder.get_info()
-        # self.cacheFolderAbsPath = cacheFolderInfo['path']
-
-    # def deletePreviousData(self):
-    #     # Delete previous data
-    #     for filename in glob.glob(os.path.join(self.cacheFolderAbsPath, '*.hdf')):
-    #         print('Deleting {}'.format(filename))
-    #         os.remove(filename)
 
     def prepareMetadata(self, plotData, daysBack, strDateEnd=None):
         if strDateEnd is None:
@@ -52,7 +35,6 @@ class DataFetch():
                              }
                            ],
                     'date_format_string': '%b/%d %H:%M',
-                    # 'file_name' : os.path.join(self.cacheFolderAbsPath, '{}_{}_{}.png'.format(plotData['abm'], plotData['lru'], plotData['monitor'])),
                     'id_plot': None,
                     'julian_offset': 0,
                     'plot_from': strStartDate,
@@ -62,7 +44,6 @@ class DataFetch():
                     'secondary_is_subplot': True,
                     'show_grid': True,
                     'show_grid_secondary': True,
-                    # 'temp_dir': self.cacheFolderAbsPath,
                     'temp_dir': '/dev/null',
                     'title': 'Title',
                     'use_log_scale': False,
@@ -79,20 +60,9 @@ class DataFetch():
                    }
         self.plotMetadata = plotData
 
-    def getData(self, plotData, daysBack=1, strDateEnd=None):
+    def getData(self, plotData, daysBack=7, strDateEnd=None):
         self.prepareMetadata(plotData, daysBack, strDateEnd)
 
         # Retrieve data and generate plot
         pm = PlotMonitor.RetrieveData(self.plotMetadata)
         return pm.retrieve()
-        #pm = PlotMonitor.PlotData(plotData)
-        #pm.plot()
-
-        # self.renameFiles()
-
-    # def renameFiles(self):
-    #     # Remove timestamp from file name
-    #     for filename in glob.glob(os.path.join(self.cacheFolderAbsPath, '*.hdf')):
-    #         print(filename)
-    #         new_name = re.sub('(.*)_\d{8}_.*\.hdf', r'\1.hdf', filename)
-    #         os.rename(filename, new_name)

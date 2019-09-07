@@ -1,42 +1,35 @@
-#! /usr/bin/env python
-
 """
-This module defines PlotData and RetrieveData classes, implementing routines to obtain monitor points,
+This module defines RetrieveData class, implementing routines to obtain monitor points,
 generate monitor points plots and perform certain analysis based on data from MonitorData Service (http://monitordata.osf.alma.cl/EngLabs)
 and eventually other data sources.
 
 """
 
-from pprint import pprint
-import traceback
-# import urllib2
 import urllib3 as urllib2
 import sys
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-# import cPickle
 import tempfile
 from os import path, makedirs, chmod
-# from matplotlib.dates import date2num, num2date, DateFormatter, AutoDateFormatter, num2julian
-# import matplotlib.pyplot as plt
-# import matplotlib.ticker as ticker
-# import matplotlib.font_manager as font_manager
 import csv
 from math import *
 import getpass
 from time import time, sleep
-import warnings
 import json
 
-#import MonPlotDb
 from . import UrlTools
 from six.moves import range
+import lib.BaseLogger as BaseLogger
+import config.definitions as cfg
 
 TIMING_TEST = False
 MINIMUM_TIMESTAMP = datetime.strptime('2000-01-01T00:00:00', "%Y-%m-%dT%H:%M:%S")  # earlier dates considered corrupt
 TEMP_DIR_BASE_NAME = 'monplot'  # typically located in /tmp
 BASE_URL = 'http://monitordata.osf.alma.cl/EngLabs'
+
+logger = BaseLogger.createLogger(__name__)
+logger.addHandler(BaseLogger.getStdoutHandler())
 
 #---------------------------------
 class RetrieveData:
@@ -48,6 +41,8 @@ class RetrieveData:
 
     #---------------------------------
     def __init__(self, plotData):
+        self.logger = logger
+
         # if plotData is not a dictionary object, but a string, the argument is either the path to the json file
         # or a cPickle string representation of the dictionary
         if isinstance(plotData, str):
@@ -70,7 +65,7 @@ class RetrieveData:
             self.endDate = datetime.utcnow()
 
         if self.endDate < self.startDate:
-            print('End date must be later than start date')
+            self.logger.error('End date must be later than start date')
             raise ValueError('End date must be later than start date')
 
         # # Temporary directory for data cache
@@ -98,7 +93,7 @@ class RetrieveData:
 
         # if not self.plotData.has_key('data') or (self.plotData.has_key('data') and len(self.plotData['data']) == 0):
         if 'data' not in self.plotData or ('data' in self.plotData and len(self.plotData['data']) == 0):
-            print('No signals to plot were provided')
+            self.logger.error('No signals to plot were provided')
             raise ValueError('No signals to plot were provided')
 
         if 'save_csv_dir' in self.plotData:
@@ -107,40 +102,12 @@ class RetrieveData:
             self.saveCsvFilesDir = None
 
         self.numMonFiles = None
-
-    # #---------------------------------
-    # # @staticmethod
-    # def createTempDirectory(self):
-    #     '''Create temporary directory for data cache. If a path is provided and directory does not
-    #        exist, attempt to create directory. If directory cannot be created or path is not given, create
-    #        directory in system temporary folder'''
-
-    #     tmpBaseDir = tempfile.gettempdir() # typically '/tmp'
-    #     tmpMonPlotDir = path.join(tmpBaseDir, TEMP_DIR_BASE_NAME)
-
-    #     # If base MonitorPlotter temp dir does not exist, create
-    #     if not path.isdir(tmpMonPlotDir):
-    #         makedirs(tmpMonPlotDir, 0777)
-    #         chmod(tmpMonPlotDir, 0777)
-    #         print('Created %s' % tmpMonPlotDir)
-
-    #     if not path.isdir(self.tempDir):
-    #         try:
-    #             makedirs(self.tempDir, 0777)
-    #             chmod(self.tempDir, 0777)
-    #         except:
-    #             user = getpass.getuser()
-    #             self.tempDir = path.join(tmpBaseDir, TEMP_DIR_BASE_NAME, user)
-    #             if not path.isdir(self.tempDir):
-    #                 makedirs(self.tempDir, 0777)
-    #                 chmod(self.tempDir, 0777)
-
     #---------------------------------------
     def downloadDailyData(self, currDate, abm, lru, monitor):
         # Read data from MonitorData website
         url = UrlTools.BuildMonPointUrl(currDate.strftime('%Y-%m-%d'), abm, lru, monitor)
-        print('Reading data from %s...' % url)
-        sys.stdout.flush()
+        self.logger.info('Reading data from %s...' % url)
+        # sys.stdout.flush()
 
         raw = pd.DataFrame()
         ex = None
@@ -150,25 +117,25 @@ class RetrieveData:
         #except pd.cparser.CParserError as ex:
         #    print('Skipping malformed file %s...' % url)
         except (ValueError, pd.io.common.EmptyDataError) as ex:
-            print('Skipping empty file %s...' % url)
+            self.logger.error('Skipping empty file %s...' % url)
         except urllib2.URLError as ex:
-            print('ERROR: Could not fetch URL %s.  Trying for a second time...' % url)
+            self.logger.error('ERROR: Could not fetch URL %s.  Trying for a second time...' % url)
             sleep(1)
             try:
                 raw = pd.read_csv(url, sep=' ', header=None, engine='c', prefix='col')
             #except pd.parser.CParserError as ex:
             #    print('Skipping malformed file %s...' % url)
             except ValueError as ex:
-                print('Skipping empty file %s...' % url)
+                self.logger.error('Skipping empty file %s...' % url)
             except urllib2.URLError as ex:
-                print('ERROR: Gave up trying to fetch URL %s' % url)
+                self.logger.error('ERROR: Gave up trying to fetch URL %s' % url)
                 sleep(1)
             except:
-                print('Skipping file %s...' % url)
+                self.logger.exception('Skipping file %s...' % url)
         except:
-            print('Skipping file %s...' % url)
-        finally:
-            sys.stdout.flush()
+            self.logger.exception('Skipping file %s...' % url)
+        # finally:
+        #     sys.stdout.flush()
 
         # return raw, ex
         return raw, None
@@ -205,13 +172,13 @@ class RetrieveData:
 
 
             dataCol = int(plotter['data_column'])
-            print('\nProcessing %s / %s / %s / col%d' % (plotter['abm'], plotter['lru'], plotter['monitor'], dataCol))
+            self.logger.info('\nProcessing %s / %s / %s / col%d' % (plotter['abm'], plotter['lru'], plotter['monitor'], dataCol))
 
             # If present, used cached data files for current data set
             dataFileName = '%s_%s_%s_%s_%ddays.hdf' % (plotter['abm'], plotter['lru'], plotter['monitor'],
                                                        self.startDate.strftime('%Y%m%d'), self.numMonFiles)
             if not self.noCache and not signalNoCache and path.isfile(path.join(self.tempDir, dataFileName)):
-                print('Found cached data file %s' % path.join(self.tempDir, dataFileName))
+                self.logger.info('Found cached data file %s' % path.join(self.tempDir, dataFileName))
                 data = pd.read_hdf(path.join(self.tempDir, dataFileName), 'data')
                 noSignals = False
             else:
@@ -230,7 +197,7 @@ class RetrieveData:
                         # Empty file, attempt alternative lru or monitor point name, if available
                         elif type(ex) in [ValueError, pd.io.common.EmptyDataError]:
                             if 'monitor_alternative' in plotter and plotter['monitor_alternative'] != '':
-                                print('Attempting alternative monitor point %s' % plotter['monitor_alternative'])
+                                self.logger.info('Attempting alternative monitor point %s' % plotter['monitor_alternative'])
 
                                 if not isinstance(plotter['monitor_alternative'], list):
                                     raw, ex = self.downloadDailyData(currDate, plotter['abm'], plotter['lru'], plotter['monitor_alternative'])
@@ -259,10 +226,10 @@ class RetrieveData:
                                             raw['col%d' % (i + 1)] = np.nan
                                     usingAlternativeMonitor = True
                             elif 'lru_alternative' in plotter and plotter['lru_alternative']:
-                                print('Attempting alternative lru name %s' % plotter['lru_alternative'])
+                                self.logger.info('Attempting alternative lru name %s' % plotter['lru_alternative'])
                                 raw, ex = self.downloadDailyData(currDate, plotter['abm'], plotter['lru_alternative'], plotter['monitor'])
                                 if ex is not None:
-                                    print('No data found on alternative lru name %s. Skipping...' % plotter['lru_alternative'])
+                                    self.logger.info('No data found on alternative lru name %s. Skipping...' % plotter['lru_alternative'])
                                     continue
                         # Failed URL fetch, gave up trying
                         elif type(ex) is urllib2.URLError:
@@ -277,14 +244,14 @@ class RetrieveData:
 
                 # Validate requested column exists in dataframe
                 if not 'col%d' % dataCol in data.columns:
-                    print('No column %d found in data. Skipping signal.' % dataCol)
+                    self.logger.info('No column %d found in data. Skipping signal.' % dataCol)
                     continue
 
                 noSignals = False
 
                 initLen = len(data)
-                print('Processing and filtering data. %d monitor points. Please wait...' % initLen)
-                sys.stdout.flush()
+                self.logger.info('Processing and filtering data. %d monitor points. Please wait...' % initLen)
+                # sys.stdout.flush()
 
                 # Convert timestamp column to datetime format
                 data.col0 = pd.to_datetime(data.col0, format="%Y-%m-%dT%H:%M:%S.%f", errors='coerce')
@@ -302,8 +269,8 @@ class RetrieveData:
                 data = data.apply(lambda x: pd.to_numeric(x, errors='coerce'))
                 data.dropna(axis='index', how='all', inplace=True)
 
-                print('Data rows removed: %d' % (initLen - len(data)))
-                sys.stdout.flush()
+                self.logger.info('{}-{}-{} Data rows removed: {}'.format(plotter['abm'], plotter['lru'], plotter['monitor'], (initLen - len(data))))
+                # sys.stdout.flush()
 
                 # # Keep a temporary copy of downloaded and filtered data
                 # print('\nDumping retrieved filtered data to temporary file...')
