@@ -41,14 +41,14 @@ def main():
     if DEBUG:
         logger.addHandler(BaseLogger.getStdoutHandler())
 
-    logger.info(f'Starting mon-to-influx data collection. {len(monitorPoints)} monitor points defined.')
+    logger.info(f'Started mon-to-influx data collection. {len(monitorPoints)} monitor points defined.')
 
     # Data collector from ALMA monitoring database (based on MonitorPlotter application)
     fetcher = DataFetch()
 
     for measurement in monitorPoints:
         plotData = {'abm': measurement['abm'], 'lru': measurement['lru'], 'monitor': measurement['mon']}
-        data = fetcher.getData(plotData, daysBack=7) #, strDateEnd='2019-08-01 00:00:00')
+        data = fetcher.getData(plotData, daysBack=1) #, strDateEnd='2019-08-01 00:00:00')
 
         # Remove microseconds part of timestamp to reduce storage
         # Alternatively use: lambda t: t.strftime('%Y-%m-%d %H:%M:%S')
@@ -81,6 +81,7 @@ def main():
                 logger.debug('Simulation mode:')
                 # logger.debug(measurements)
 
+    logger.info('Finished mon-to-influx data collection.')
 
 if __name__ == '__main__':
     sys.exit(main())
