@@ -269,7 +269,7 @@ class RetrieveData:
                 data = data.apply(lambda x: pd.to_numeric(x, errors='coerce'))
                 data.dropna(axis='index', how='all', inplace=True)
 
-                self.logger.info('{}-{}-{} Data rows removed: {}'.format(plotter['abm'], plotter['lru'], plotter['monitor'], (initLen - len(data))))
+                self.logger.info('{} / {} / {} Data rows removed: {}'.format(plotter['abm'], plotter['lru'], plotter['monitor'], (initLen - len(data))))
                 # sys.stdout.flush()
 
                 # # Keep a temporary copy of downloaded and filtered data
