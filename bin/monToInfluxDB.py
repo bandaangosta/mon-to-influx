@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 '''
 ALMA monitoring database (text-based) to temporary AMG time series database (InfluxDB) data collector.
 Data on AMG time series database is used for fast predefined data analysis, visualizations (Grafana dashboards) and
@@ -31,6 +33,7 @@ import requests
 import traceback
 from lib.DataFetch import DataFetch
 import lib.BaseLogger as BaseLogger
+import lib.DateTools as DateTools
 from config.MonitorPoints import monitorPoints
 import config.definitions as cfg
 
@@ -46,9 +49,13 @@ def main():
     # Data collector from ALMA monitoring database (based on MonitorPlotter application)
     fetcher = DataFetch()
 
+    daysBack = int(sys.argv[1]) if len(sys.argv) > 1 else 1
+    strDateEnd = sys.argv[2] if len(sys.argv) > 2 else DateTools.dateToStr(datetime.now())
+
+    logger.info(f'Obtaining data for {daysBack} days back from {strDateEnd}')
     for measurement in monitorPoints:
         plotData = {'abm': measurement['abm'], 'lru': measurement['lru'], 'monitor': measurement['mon']}
-        data = fetcher.getData(plotData, daysBack=1) #, strDateEnd='2019-08-01 00:00:00')
+        data = fetcher.getData(plotData, daysBack=daysBack, strDateEnd=strDateEnd)
 
         # Remove microseconds part of timestamp to reduce storage
         # Alternatively use: lambda t: t.strftime('%Y-%m-%d %H:%M:%S')
