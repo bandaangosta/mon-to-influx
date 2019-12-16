@@ -12,6 +12,8 @@ Data collection from ALMA monitoring database (loosely) based on AMG's MonitorPl
 for Dataiku's LO2DRIFTAUTO project.
 '''
 
+# import pdb; pdb.set_trace()
+
 import os
 import sys
 
@@ -29,6 +31,7 @@ else:
 exec(open(activate_this).read(), {'__file__': activate_this})
 
 from datetime import datetime
+import math
 import requests
 import traceback
 from lib.DataFetch import DataFetch
@@ -38,6 +41,11 @@ from config.MonitorPoints import monitorPoints
 import config.definitions as cfg
 
 DEBUG = cfg.DEBUG
+
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
 def main():
     logger = BaseLogger.createLogger('mon-to-influx', rotator=True)
@@ -71,22 +79,25 @@ def main():
                                                                         # ^--- for ns precision, use: int(row.Index.to_datetime64()
         # Push measurements to database
         if dataset:
-            measurements = '\n'.join(dataset)
-            # Store measurements in timeseries database
-            if not DEBUG:
-                try:
-                    response = requests.post(cfg.TIMESERIES_DB_API_URL, data=measurements)
-                    if response.status_code == cfg.REQUEST_STATUS_CODE_OK:
-                        logger.info(f"Measurement {measurement['mon_alias']},{measurement['abm_alias']},{measurement['lru_alias']} correctly " + \
-                                    f"stored in database: {len(dataset)} records, timestamp {datetime.now().isoformat()}")
-                        pass
-                    else:
-                        logger.error('Error storing measurements in database')
-                except:
-                    logger.exception('Error storing measurements in timeseries database')
-            else:
-                logger.debug('Simulation mode:')
-                # logger.debug(measurements)
+            lenDataset = len(dataset)
+            totalChunks = math.ceil(lenDataset / cfg.TIMESERIES_DB_BATCH_SIZE)
+            for i, datasetChunk in enumerate(chunks(dataset, cfg.TIMESERIES_DB_BATCH_SIZE), 1):
+                measurements = '\n'.join(datasetChunk)
+                # Store measurements in timeseries database
+                if not DEBUG:
+                    try:
+                        response = requests.post(cfg.TIMESERIES_DB_API_URL, data=measurements)
+                        if response.status_code == cfg.REQUEST_STATUS_CODE_OK:
+                            logger.info(f"Measurement {measurement['mon_alias']},{measurement['abm_alias']},{measurement['lru_alias']} correctly " + \
+                                        f"stored in database: {len(datasetChunk)}/{lenDataset} ({i}/{totalChunks}) records, timestamp {datetime.now().isoformat()}")
+                            pass
+                        else:
+                            logger.error('Error storing measurements in database')
+                    except:
+                        logger.exception('Error storing measurements in timeseries database')
+                else:
+                    logger.debug('Simulation mode:')
+                    # logger.debug(measurements)
 
     logger.info('Finished mon-to-influx data collection.')
 
