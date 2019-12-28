@@ -34,6 +34,7 @@ from datetime import datetime
 import math
 import requests
 import traceback
+import typer
 from lib.DataFetch import DataFetch
 import lib.BaseLogger as BaseLogger
 import lib.DateTools as DateTools
@@ -47,7 +48,21 @@ def chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
-def main():
+def main(daysBack: int = typer.Option(help='Number of days back from now to retrieve', default=1, show_default=True),
+         dateEnd: str = typer.Option(help='Instead of now, retrieve data back from this moment. Format is yyyy-mm-dd hh:mm:ss', default=DateTools.dateToStr(datetime.now()))
+    ):
+    '''
+    ALMA monitoring database (text-based) to temporary AMG time series database (InfluxDB) data collector.
+    Data on AMG time series database is used for fast predefined data analysis, visualizations (Grafana dashboards) and
+    fault detection.
+
+    This process is meant to be run on a cron job collecting a small selection of monitoring points of interest.
+    Monitoring points to collect are defined in accompanying configuration file.
+
+    Data collection from ALMA monitoring database (loosely) based on AMG's MonitorPlotter application, later adapted
+    for Dataiku's LO2DRIFTAUTO project.
+    '''
+
     logger = BaseLogger.createLogger('mon-to-influx', rotator=True)
     if DEBUG:
         logger.addHandler(BaseLogger.getStdoutHandler())
@@ -57,13 +72,10 @@ def main():
     # Data collector from ALMA monitoring database (based on MonitorPlotter application)
     fetcher = DataFetch()
 
-    daysBack = int(sys.argv[1]) if len(sys.argv) > 1 else 1
-    strDateEnd = sys.argv[2] if len(sys.argv) > 2 else DateTools.dateToStr(datetime.now())
-
-    logger.info(f'Obtaining data for {daysBack} days back from {strDateEnd}')
+    logger.info(f'Obtaining data for {daysBack} days back from {dateEnd}')
     for measurement in monitorPoints:
         plotData = {'abm': measurement['abm'], 'lru': measurement['lru'], 'monitor': measurement['mon']}
-        data = fetcher.getData(plotData, daysBack=daysBack, strDateEnd=strDateEnd)
+        data = fetcher.getData(plotData, daysBack=daysBack, strDateEnd=dateEnd)
 
         # Remove microseconds part of timestamp to reduce storage
         # Alternatively use: lambda t: t.strftime('%Y-%m-%d %H:%M:%S')
@@ -102,4 +114,4 @@ def main():
     logger.info('Finished mon-to-influx data collection.')
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(typer.run(main))
