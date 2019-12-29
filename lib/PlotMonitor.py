@@ -279,7 +279,6 @@ class RetrieveData:
                 # data.to_hdf(path.join(self.tempDir, dataFileName), 'data', complevel=9, complib='zlib')
                 # print('Data is ready')
                 # print(data)
-                return data
                 # print('Saved temporary file %s' % path.join(self.tempDir, dataFileName))
             # end initial data preparation for current signal
 
@@ -287,3 +286,9 @@ class RetrieveData:
             # data.info()
             # # print(data.head())
             # print
+
+        # Return data or empty dataframe
+        if not noSignals:
+            return data
+        else:
+            return pd.DataFrame()

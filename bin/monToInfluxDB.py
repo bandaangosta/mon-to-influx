@@ -32,6 +32,7 @@ exec(open(activate_this).read(), {'__file__': activate_this})
 
 from datetime import datetime
 import math
+import re
 import requests
 import traceback
 import typer
@@ -48,9 +49,10 @@ def chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
-def main(daysBack: int = typer.Option(help='Number of days back from now to retrieve', default=1, show_default=True),
-         dateEnd: str = typer.Option(help='Instead of now, retrieve data back from this moment. Format is yyyy-mm-dd hh:mm:ss', default=DateTools.dateToStr(datetime.now()))
-    ):
+def main(
+    daysBack: int = typer.Option(help='Number of days back from now to retrieve', default=1, show_default=True),
+    dateEnd: str = typer.Option(help='Instead of now, retrieve data back from this moment. Format is yyyy-mm-dd hh:mm:ss', default=DateTools.dateToStr(datetime.now()))
+):
     '''
     ALMA monitoring database (text-based) to temporary AMG time series database (InfluxDB) data collector.
     Data on AMG time series database is used for fast predefined data analysis, visualizations (Grafana dashboards) and
@@ -74,42 +76,77 @@ def main(daysBack: int = typer.Option(help='Number of days back from now to retr
 
     logger.info(f'Obtaining data for {daysBack} days back from {dateEnd}')
     for measurement in monitorPoints:
-        plotData = {'abm': measurement['abm'], 'lru': measurement['lru'], 'monitor': measurement['mon']}
-        data = fetcher.getData(plotData, daysBack=daysBack, strDateEnd=dateEnd)
+        # ABM to retrieve data from can be a single value (e.g., DV01 or WeatherStationController) or <all_ants> placeholder
+        # which must be expanded to the full antenna list
+        if measurement['abm'] == '<all_ants>':
+            abms = cfg.allABMs
+            abmsAlias = cfg.allABMs
+        else:
+            abms = [measurement['abm']]
+            abmsAlias = [measurement['abm_alias']]
 
-        # Remove microseconds part of timestamp to reduce storage
-        # Alternatively use: lambda t: t.strftime('%Y-%m-%d %H:%M:%S')
-        # data.index = data.index.map(lambda x: x.replace(microsecond=0))
+        # LRU to retrieve data from can be a single value (e.g., SIGNAL_RED_PD_PWR_MON) or a pseudo-regular expression
+        # in format 'some_text<i-j>' which expands to 'some_text(i)', 'some_text(i+1)', ..., 'some_text(j)' with i
+        # and j integers greater than zero. This allows to iterate over polarizations, baseband pairs, etc.
+        # Example: 'LO2BBpr<0-3>' generates the list ['LO2BBpr0', 'LO2BBpr1', 'LO2BBpr2', 'LO2BBpr3']
+        pattern = re.compile(r"(.*)<([0-9]*)-([0-9]*)>")
+        results = pattern.findall(measurement['lru'])
+        lrus = []
+        if len(results) > 0:
+            for i in range(int(results[0][1]), int(results[0][2]) + 1):
+                lrus.append('{}{}'.format(results[0][0], str(i)))
+            lrusAlias = lrus
+        else:
+            lrus = [measurement['lru']]
+            lrusAlias = [measurement['lru_alias']]
 
-        dataset = []
-        for row in data.itertuples():
-            dataset.append(cfg.MEASUREMENT_BASE.format(measurement=measurement['mon_alias'],
-                                                       abm=measurement['abm_alias'],
-                                                       lru=measurement['lru_alias'],
-                                                       value=row.col1,
-                                                       timestamp=int(row.Index.timestamp())))
-                                                                        # ^--- for ns precision, use: int(row.Index.to_datetime64()
-        # Push measurements to database
-        if dataset:
-            lenDataset = len(dataset)
-            totalChunks = math.ceil(lenDataset / cfg.TIMESERIES_DB_BATCH_SIZE)
-            for i, datasetChunk in enumerate(chunks(dataset, cfg.TIMESERIES_DB_BATCH_SIZE), 1):
-                measurements = '\n'.join(datasetChunk)
-                # Store measurements in timeseries database
-                if not DEBUG:
-                    try:
-                        response = requests.post(cfg.TIMESERIES_DB_API_URL, data=measurements)
-                        if response.status_code == cfg.REQUEST_STATUS_CODE_OK:
-                            logger.info(f"Measurement {measurement['mon_alias']},{measurement['abm_alias']},{measurement['lru_alias']} correctly " + \
-                                        f"stored in database: {len(datasetChunk)}/{lenDataset} ({i}/{totalChunks}) records, timestamp {datetime.now().isoformat()}")
-                            pass
+        for indexAbm, abm in enumerate(abms):
+            for indexLru, lru in enumerate(lrus):
+                plotData = {
+                    'abm': abm,
+                    'lru': lru,
+                    'monitor': measurement['mon'],
+                    'abm_alias': abmsAlias[indexAbm],
+                    'lru_alias': lrusAlias[indexLru]
+                }
+
+                # print(plotData)
+                data = fetcher.getData(plotData, daysBack=daysBack, strDateEnd=dateEnd)
+
+                # Remove microseconds part of timestamp to reduce storage
+                # Alternatively use: lambda t: t.strftime('%Y-%m-%d %H:%M:%S')
+                # data.index = data.index.map(lambda x: x.replace(microsecond=0))
+
+                dataset = []
+                if len(data) > 0:
+                    for row in data.itertuples():
+                        dataset.append(cfg.MEASUREMENT_BASE.format(measurement=measurement['mon_alias'],
+                                                                   abm=abmsAlias[indexAbm],
+                                                                   lru=lrusAlias[indexLru],
+                                                                   value=row.col1,
+                                                                   timestamp=int(row.Index.timestamp())))
+                                                                                    # ^--- for ns precision, use: int(row.Index.to_datetime64()
+                # Push measurements to database
+                if dataset:
+                    lenDataset = len(dataset)
+                    totalChunks = math.ceil(lenDataset / cfg.TIMESERIES_DB_BATCH_SIZE)
+                    for i, datasetChunk in enumerate(chunks(dataset, cfg.TIMESERIES_DB_BATCH_SIZE), 1):
+                        measurements = '\n'.join(datasetChunk)
+                        # Store measurements in timeseries database
+                        if not DEBUG:
+                            try:
+                                response = requests.post(cfg.TIMESERIES_DB_API_URL, data=measurements)
+                                if response.status_code == cfg.REQUEST_STATUS_CODE_OK:
+                                    logger.info(f"Measurement {measurement['mon_alias']},{abmsAlias[indexAbm]},{lrusAlias[indexLru]} correctly " + \
+                                                f"stored in database: {len(datasetChunk)}/{lenDataset} ({i}/{totalChunks}) records, timestamp {datetime.now().isoformat()}")
+                                    pass
+                                else:
+                                    logger.error('Error storing measurements in database')
+                            except:
+                                logger.exception('Error storing measurements in timeseries database')
                         else:
-                            logger.error('Error storing measurements in database')
-                    except:
-                        logger.exception('Error storing measurements in timeseries database')
-                else:
-                    logger.debug('Simulation mode:')
-                    # logger.debug(measurements)
+                            logger.debug('Simulation mode:')
+                            # logger.debug(measurements)
 
     logger.info('Finished mon-to-influx data collection.')
 
