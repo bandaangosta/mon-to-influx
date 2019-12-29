@@ -38,6 +38,7 @@ import traceback
 import typer
 from lib.DataFetch import DataFetch
 import lib.BaseLogger as BaseLogger
+import lib.CacheHandler as CacheHandler
 import lib.DateTools as DateTools
 from config.MonitorPoints import monitorPoints
 import config.definitions as cfg
@@ -45,7 +46,7 @@ import config.definitions as cfg
 DEBUG = cfg.DEBUG
 
 def chunks(lst, n):
-    """Yield successive n-sized chunks from lst."""
+    '''Yield successive n-sized chunks from lst.'''
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
@@ -59,7 +60,7 @@ def main(
     fault detection.
 
     This process is meant to be run on a cron job collecting a small selection of monitoring points of interest.
-    Monitoring points to collect are defined in accompanying configuration file.
+    Monitoring points to collect are defined in accompanying configuration file MonitorPoints.py.
 
     Data collection from ALMA monitoring database (loosely) based on AMG's MonitorPlotter application, later adapted
     for Dataiku's LO2DRIFTAUTO project.
@@ -74,8 +75,19 @@ def main(
     # Data collector from ALMA monitoring database (based on MonitorPlotter application)
     fetcher = DataFetch()
 
+    # Cache database connection to manage monitor point querying expiration time
+    cache = CacheHandler.CacheHandler(cfg.CACHE_HOST)
+
     logger.info(f'Obtaining data for {daysBack} days back from {dateEnd}')
+
+    # Iterate over all monitor points to query as defined in MonitorPoints.py
     for measurement in monitorPoints:
+        # Skip this measurement if not enough time has passed since last data retrieval
+        ttl = cache.getTtlHrs('{}:{}:{}'.format(measurement['abm'], measurement['lru'], measurement['mon']))
+        if ttl:
+            logger.info(f"Measurement {measurement['abm']}:{measurement['lru']}:{measurement['mon']} must wait {ttl:.2f} hours until obtained again")
+            continue
+
         # ABM to retrieve data from can be a single value (e.g., DV01 or WeatherStationController) or <all_ants> placeholder
         # which must be expanded to the full antenna list
         if measurement['abm'] == '<all_ants>':
@@ -100,17 +112,15 @@ def main(
             lrus = [measurement['lru']]
             lrusAlias = [measurement['lru_alias']]
 
+        # Iterate over all abms, lrus and mons
         for indexAbm, abm in enumerate(abms):
             for indexLru, lru in enumerate(lrus):
                 plotData = {
                     'abm': abm,
                     'lru': lru,
-                    'monitor': measurement['mon'],
-                    'abm_alias': abmsAlias[indexAbm],
-                    'lru_alias': lrusAlias[indexLru]
+                    'monitor': measurement['mon']
                 }
 
-                # print(plotData)
                 data = fetcher.getData(plotData, daysBack=daysBack, strDateEnd=dateEnd)
 
                 # Remove microseconds part of timestamp to reduce storage
@@ -120,13 +130,17 @@ def main(
                 dataset = []
                 if len(data) > 0:
                     for row in data.itertuples():
-                        dataset.append(cfg.MEASUREMENT_BASE.format(measurement=measurement['mon_alias'],
-                                                                   abm=abmsAlias[indexAbm],
-                                                                   lru=lrusAlias[indexLru],
-                                                                   value=row.col1,
-                                                                   timestamp=int(row.Index.timestamp())))
-                                                                                    # ^--- for ns precision, use: int(row.Index.to_datetime64()
-                # Push measurements to database
+                        dataset.append(
+                            cfg.MEASUREMENT_BASE.format(
+                                measurement=measurement['mon_alias'],
+                                abm=abmsAlias[indexAbm],
+                                lru=lrusAlias[indexLru],
+                                value=row.col1,
+                                timestamp=int(row.Index.timestamp())
+                            )                   # ^--- for ns precision, use: int(row.Index.to_datetime64()
+                        )
+
+                # Push measurements to database in batches of TIMESERIES_DB_BATCH_SIZE records
                 if dataset:
                     lenDataset = len(dataset)
                     totalChunks = math.ceil(lenDataset / cfg.TIMESERIES_DB_BATCH_SIZE)
@@ -147,6 +161,15 @@ def main(
                         else:
                             logger.debug('Simulation mode:')
                             # logger.debug(measurements)
+
+        # Set cache key for expiration calculation
+        queryHrs = measurement.get('query_hrs')
+        if queryHrs:
+            cache.setKeyExpire(
+                '{}:{}:{}'.format(measurement['abm'], measurement['lru'], measurement['mon']),
+                datetime.now().isoformat(),
+                queryHrs * 60 * 60,
+            )
 
     logger.info('Finished mon-to-influx data collection.')
 
