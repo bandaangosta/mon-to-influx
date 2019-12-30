@@ -6,7 +6,8 @@ monitorPoints = [
         'lru_alias' : 'ML1',
         'mon'       : 'SIGNAL_PM_DC_10V',
         'mon_alias' : 'SIGNAL_PM_DC_10V',
-        'query_hrs' : 3
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
     },
     {
         'abm'       : 'CentralLO',
@@ -15,7 +16,8 @@ monitorPoints = [
         'lru_alias' : 'ML1',
         'mon'       : 'SIGNAL_PPLN_TEMP_MON',
         'mon_alias' : 'SIGNAL_PPLN_TEMP_MON',
-        'query_hrs' : 3
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
     },
     {
         'abm'       : 'CentralLO',
@@ -24,7 +26,8 @@ monitorPoints = [
         'lru_alias' : 'ML1',
         'mon'       : 'SIGNAL_RED_PD_PWR_MON',
         'mon_alias' : 'SIGNAL_RED_PD_PWR_MON',
-        'query_hrs' : 3
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
     },
     {
         'abm'       : 'CentralLO',
@@ -33,7 +36,8 @@ monitorPoints = [
         'lru_alias' : 'ML1',
         'mon'       : 'LASER_SIGNAL_FL_TEMP_MON',
         'mon_alias' : 'LASER_SIGNAL_FL_TEMP_MON',
-        'query_hrs' : 3
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
     },
     {
         'abm'       : 'CentralLO',
@@ -42,7 +46,8 @@ monitorPoints = [
         'lru_alias' : 'ML1',
         'mon'       : 'AMBIENT_TEMPERATURE',
         'mon_alias' : 'AMBIENT_TEMPERATURE',
-        'query_hrs' : 3
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
     },
     {
         'abm'       : 'CentralLO',
@@ -51,7 +56,8 @@ monitorPoints = [
         'lru_alias' : 'ML2',
         'mon'       : 'SIGNAL_PM_DC_10V',
         'mon_alias' : 'SIGNAL_PM_DC_10V',
-        'query_hrs' : 3
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
     },
     {
         'abm'       : 'CentralLO',
@@ -60,7 +66,8 @@ monitorPoints = [
         'lru_alias' : 'ML2',
         'mon'       : 'SIGNAL_PPLN_TEMP_MON',
         'mon_alias' : 'SIGNAL_PPLN_TEMP_MON',
-        'query_hrs' : 3
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
     },
     {
         'abm'       : 'CentralLO',
@@ -69,7 +76,8 @@ monitorPoints = [
         'lru_alias' : 'ML2',
         'mon'       : 'SIGNAL_RED_PD_PWR_MON',
         'mon_alias' : 'SIGNAL_RED_PD_PWR_MON',
-        'query_hrs' : 3
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
     },
     {
         'abm'       : 'CentralLO',
@@ -78,7 +86,8 @@ monitorPoints = [
         'lru_alias' : 'ML2',
         'mon'       : 'LASER_SIGNAL_FL_TEMP_MON',
         'mon_alias' : 'LASER_SIGNAL_FL_TEMP_MON',
-        'query_hrs' : 3
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
     },
     {
         'abm'       : 'CentralLO',
@@ -87,7 +96,8 @@ monitorPoints = [
         'lru_alias' : 'ML2',
         'mon'       : 'AMBIENT_TEMPERATURE',
         'mon_alias' : 'AMBIENT_TEMPERATURE',
-        'query_hrs' : 3
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
     },
     {
         'abm'       : 'WeatherStationController',
@@ -96,7 +106,8 @@ monitorPoints = [
         'lru_alias' : 'MeteoCentral',
         'mon'       : 'TEMPERATURE',
         'mon_alias' : 'TEMPERATURE',
-        'query_hrs' : 3
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
     },
     {
         'abm'       : '<all_ants>',
@@ -105,7 +116,8 @@ monitorPoints = [
         'lru_alias' : 'LO2BBpr<0-3>',
         'mon'       : 'LO2_FREQUENCY',
         'mon_alias' : 'LO2_FREQUENCY',
-        'query_hrs' : 24
+        'query_hrs' : 24,
+        'retention_policy': 'rp_40_days'
     },
     {
         'abm'       : '<all_ants>',
@@ -114,7 +126,8 @@ monitorPoints = [
         'lru_alias' : 'LO2BBpr<0-3>',
         'mon'       : 'FREQUENCY_OFFSET',
         'mon_alias' : 'FREQUENCY_OFFSET',
-        'query_hrs' : 24
+        'query_hrs' : 24,
+        'retention_policy': 'rp_40_days'
     },
     {
         'abm'       : '<all_ants>',
@@ -123,6 +136,7 @@ monitorPoints = [
         'lru_alias' : 'LO2BBpr<0-3>',
         'mon'       : 'FM_COIL_VOLTAGE',
         'mon_alias' : 'FM_COIL_VOLTAGE',
-        'query_hrs' : 24
+        'query_hrs' : 24,
+        'retention_policy': 'rp_40_days'
     }
 ]

@@ -149,10 +149,10 @@ def main(
                         # Store measurements in timeseries database
                         if not DEBUG:
                             try:
-                                response = requests.post(cfg.TIMESERIES_DB_API_URL, data=measurements)
+                                response = requests.post(cfg.TIMESERIES_DB_API_URL.format(rp=measurement.get('retention_policy', 'autogen')), data=measurements)
                                 if response.status_code == cfg.REQUEST_STATUS_CODE_OK:
                                     logger.info(f"Measurement {measurement['mon_alias']},{abmsAlias[indexAbm]},{lrusAlias[indexLru]} correctly " + \
-                                                f"stored in database: {len(datasetChunk)}/{lenDataset} ({i}/{totalChunks}) records, timestamp {datetime.now().isoformat()}")
+                                                f"stored in DATABASE {cfg.TIMESERIES_DB_NAME} RP {measurement['retention_policy']}: {len(datasetChunk)}/{lenDataset} ({i}/{totalChunks}) records, timestamp {datetime.now().isoformat()}")
                                     pass
                                 else:
                                     logger.error('Error storing measurements in database')
