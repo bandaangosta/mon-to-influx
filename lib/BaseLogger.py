@@ -3,8 +3,10 @@ import time
 import logging
 from logging.handlers import RotatingFileHandler, WatchedFileHandler
 
-LOG_FILE = '/var/log/mon_to_influx.log'
-FORMAT_BASE = '%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d:%(funcName)s() - %(message)s'
+# LOG_FILE = '/var/log/mon_to_influx.log'
+LOG_FILE = "./mon_to_influx.log"
+FORMAT_BASE = "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d:%(funcName)s() - %(message)s"
+
 
 def createLogger(name, format=FORMAT_BASE, rotator=False):
     logger = logging.getLogger(name)
