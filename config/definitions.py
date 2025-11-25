@@ -9,7 +9,7 @@ allABMs = CMs + DAs + DVs + PMs
 
 TIMESERIES_DB_HOST = '172.17.0.1'
 TIMESERIES_DB_PORT = '8086'
-TIMESERIES_DB_NAME = 'testdb'
+TIMESERIES_DB_NAME = 'monitor_ict'
 TIMESERIES_DB_API_URL = 'http://{host}:{port}/write?db={db}&rp={{rp}}&precision=s'.format(
                                                                                          host=TIMESERIES_DB_HOST,
                                                                                          port=TIMESERIES_DB_PORT,
@@ -20,4 +20,4 @@ MEASUREMENT_BASE = '{measurement},abm={abm},lru={lru} value={value:.3f} {timesta
 REQUEST_STATUS_CODE_OK = 204
 
 # Cache DB definitions
-CACHE_HOST='172.17.0.1'
+CACHE_HOST='127.0.0.1'

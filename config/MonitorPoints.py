@@ -1,5 +1,15 @@
 monitorPoints = [
     {
+        'abm'       : 'DV01',
+        'abm_alias' : 'DV01',
+        'lru'       : 'LORR',
+        'lru_alias' : 'LORR',
+        'mon'       : 'AMBIENT_TEMPERATURE',
+        'mon_alias' : 'AMBIENT_TEMPERATURE',
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
+    },
+    {
         'abm'       : 'CentralLO',
         'abm_alias' : 'CLO',
         'lru'       : 'ML_930008016217fc10',
@@ -138,5 +148,15 @@ monitorPoints = [
         'mon_alias' : 'FM_COIL_VOLTAGE',
         'query_hrs' : 24,
         'retention_policy': 'rp_40_days'
+    },
+    {
+        'abm'       : '<all_ants>',
+        'abm_alias' : '<all_ants>',
+        'lru'       : 'FrontEnd_Cryostat',
+        'lru_alias' : 'Cryostat',
+        'mon'       : 'TRANS_NUM',
+        'mon_alias' : 'TRANS_NUM',
+        'query_hrs' : 3,
+        'retention_policy': 'rp_6_months'
     }
 ]

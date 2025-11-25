@@ -160,7 +160,7 @@ def main(
                                 logger.exception('Error storing measurements in timeseries database')
                         else:
                             logger.debug('Simulation mode:')
-                            # logger.debug(measurements)
+                            logger.debug(measurements)
 
         # Set cache key for expiration calculation
         queryHrs = measurement.get('query_hrs')
